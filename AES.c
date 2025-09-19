@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 
 const int Nr = 10;
 static const unsigned char S_box[256] = {
@@ -42,9 +43,48 @@ void ShiftRows(unsigned char state[])
             ShiftRow(state, i);
     }
 }
+unsigned char xTimes(unsigned char b)
+{
+    if(b & (1<<7))
+        return ((b<<1) ^ 0x1b);
+    return (b<<1);
+}
+unsigned char GFMult(unsigned char a, unsigned char b) {
+    unsigned char result = 0;
+    while (b > 0) {
+        if (b & 0x01) {
+            result ^= a;
+        }
+        a = xTimes(a);
+        b >>= 1;
+    }
+    return result;
+}
 
+void MixColumns(unsigned char state[])
+{
+    unsigned char state_prime[16];
+    for(int i=0; i<4; i++){
+            *(state_prime + i) = GFMult(0x02, *(state + i)) ^ GFMult(0x03, *(state + 4 + i)) ^ *(state + 4*2 + i) ^ *(state + 4*3 + i);
+            *(state_prime + 4*1 + i) = *(state + i) ^ GFMult(0x02, *(state + 4 + i)) ^ GFMult(0x03, *(state + 4*2 + i)) ^ *(state + 4*3 + i);
+            *(state_prime + 4*2 + i) = *(state + i) ^ *(state + 4 + i) ^ GFMult(0x02, *(state + 4*2 + i)) ^ GFMult(0x03, *(state + 4*3 + i));
+            *(state_prime + 4*3 + i) = GFMult(0x03, *(state + i)) ^ *(state + 4 + i) ^ *(state + 4*2 + i) ^ GFMult(0x02, *(state + 4*3 + i));
+    }
+    for(int i=0; i<16; i++)
+        *(state + i) = *(state_prime + i);
+}
 int main()
 {
-
-    return 0;
+    unsigned char state[] =  {
+        0xd4, 0x6b, 0xd4, 0x40,
+        0xbf, 0x85, 0xbf, 0x41,
+        0x5d, 0xd3, 0x5d, 0x42,
+        0x81, 0xf0, 0x81, 0x43};
+    MixColumns(state);
+    for(int i=0; i<4; i++){
+        for(int j=0; j<4; j++)
+            printf("0x%02x ", *(state + (4*i + j)));
+        printf("\n");
+    }
+    //printf("%02x\n", GFMult(0x57, 0x00));
 }
