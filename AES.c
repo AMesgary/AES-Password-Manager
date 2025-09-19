@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdint.h>
 
 const int Nr = 10;
 static const unsigned char S_box[256] = {
@@ -75,16 +74,5 @@ void MixColumns(unsigned char state[])
 }
 int main()
 {
-    unsigned char state[] =  {
-        0xd4, 0x6b, 0xd4, 0x40,
-        0xbf, 0x85, 0xbf, 0x41,
-        0x5d, 0xd3, 0x5d, 0x42,
-        0x81, 0xf0, 0x81, 0x43};
-    MixColumns(state);
-    for(int i=0; i<4; i++){
-        for(int j=0; j<4; j++)
-            printf("0x%02x ", *(state + (4*i + j)));
-        printf("\n");
-    }
-    //printf("%02x\n", GFMult(0x57, 0x00));
+    return 0;
 }
