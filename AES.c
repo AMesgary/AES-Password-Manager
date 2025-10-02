@@ -1,7 +1,7 @@
 #include <stdio.h>
 
-const int Nr = 10;
-static const unsigned char S_box[256] = {
+const int nr = 10;
+static const unsigned char s_box[256] = {
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
     0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
     0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15,
@@ -20,13 +20,13 @@ static const unsigned char S_box[256] = {
     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
 };
 
-void SubBytes(unsigned char state[])
+void sub_bytes(unsigned char state[])
 {
     for(int i=0; i<16; i++)
-        *(state + i) = S_box[*(state + i)]; 
+        *(state + i) = s_box[*(state + i)]; 
 
 }
-void ShiftRow(unsigned char state[], int row)
+void shift_row(unsigned char state[], int row)
 {
     unsigned char tmp;
     tmp = *(state + 4*row);
@@ -35,16 +35,45 @@ void ShiftRow(unsigned char state[], int row)
     *(state + 4*row + 3) = tmp; 
 
 }
-void ShiftRows(unsigned char state[])
+void shift_rows(unsigned char state[])
 {
     for(int i=0; i<4; i++){
         for(int j=0; j<i; j++)
-            ShiftRow(state, i);
+            shift_row(state, i);
     }
+}
+unsigned char x_times(unsigned char b)
+{
+    if(b & (1<<7))
+        return ((b<<1) ^ 0x1b);
+    return (b<<1);
+}
+unsigned char GF_mult(unsigned char a, unsigned char b) {
+    unsigned char result = 0;
+    while (b > 0) {
+        if (b & 0x01) {
+            result ^= a;
+        }
+        a = x_times(a);
+        b >>= 1;
+    }
+    return result;
+}
+
+void mix_columns(unsigned char state[])
+{
+    unsigned char state_prime[16];
+    for(int i=0; i<4; i++){
+            *(state_prime + i) = GF_mult(0x02, *(state + i)) ^ GF_mult(0x03, *(state + 4 + i)) ^ *(state + 4*2 + i) ^ *(state + 4*3 + i);
+            *(state_prime + 4 + i) = *(state + i) ^ GF_mult(0x02, *(state + 4 + i)) ^ GF_mult(0x03, *(state + 4*2 + i)) ^ *(state + 4*3 + i);
+            *(state_prime + 8 + i) = *(state + i) ^ *(state + 4 + i) ^ GF_mult(0x02, *(state + 4*2 + i)) ^ GF_mult(0x03, *(state + 4*3 + i));
+            *(state_prime + 12 + i) = GF_mult(0x03, *(state + i)) ^ *(state + 4 + i) ^ *(state + 4*2 + i) ^ GF_mult(0x02, *(state + 4*3 + i));
+    }
+    for(int i=0; i<16; i++)
+        *(state + i) = *(state_prime + i);
 }
 
 int main()
 {
-
     return 0;
 }
