@@ -19,14 +19,15 @@ static const unsigned char s_box[256] = {
     0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
 };
+static const unsigned char r_con[11] = {0x00,0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1B,0x36};
 
-void sub_bytes(unsigned char state[])
+void sub_bytes(unsigned char state[], int size) //can also be used as sub_word
 {
-    for(int i=0; i<16; i++)
+    for(int i=0; i<size; i++)
         *(state + i) = s_box[*(state + i)]; 
 
 }
-void shift_row(unsigned char state[], int row)
+void shift_row(unsigned char state[], int row) //can also be used as rot_word
 {
     unsigned char tmp;
     tmp = *(state + 4*row);
@@ -37,10 +38,10 @@ void shift_row(unsigned char state[], int row)
 }
 void shift_rows(unsigned char state[])
 {
-    for(int i=0; i<4; i++){
+    for(int i=0; i<4; i++)
         for(int j=0; j<i; j++)
             shift_row(state, i);
-    }
+
 }
 unsigned char x_times(unsigned char b)
 {
@@ -48,29 +49,49 @@ unsigned char x_times(unsigned char b)
         return ((b<<1) ^ 0x1b);
     return (b<<1);
 }
-unsigned char GF_mult(unsigned char a, unsigned char b) {
+unsigned char GF_mult(unsigned char a, unsigned char b)
+{
     unsigned char result = 0;
-    while (b > 0) {
-        if (b & 0x01) {
+    while (b > 0){
+        if (b & 0x01)
             result ^= a;
-        }
         a = x_times(a);
         b >>= 1;
     }
     return result;
 }
-
 void mix_columns(unsigned char state[])
 {
     unsigned char state_prime[16];
     for(int i=0; i<4; i++){
-            *(state_prime + i) = GF_mult(0x02, *(state + i)) ^ GF_mult(0x03, *(state + 4 + i)) ^ *(state + 4*2 + i) ^ *(state + 4*3 + i);
-            *(state_prime + 4 + i) = *(state + i) ^ GF_mult(0x02, *(state + 4 + i)) ^ GF_mult(0x03, *(state + 4*2 + i)) ^ *(state + 4*3 + i);
-            *(state_prime + 8 + i) = *(state + i) ^ *(state + 4 + i) ^ GF_mult(0x02, *(state + 4*2 + i)) ^ GF_mult(0x03, *(state + 4*3 + i));
-            *(state_prime + 12 + i) = GF_mult(0x03, *(state + i)) ^ *(state + 4 + i) ^ *(state + 4*2 + i) ^ GF_mult(0x02, *(state + 4*3 + i));
+        *(state_prime + i) = GF_mult(0x02, *(state + i)) ^ GF_mult(0x03, *(state + 4 + i)) ^ *(state + 4*2 + i) ^ *(state + 4*3 + i);
+        *(state_prime + 4 + i) = *(state + i) ^ GF_mult(0x02, *(state + 4 + i)) ^ GF_mult(0x03, *(state + 4*2 + i)) ^ *(state + 4*3 + i);
+        *(state_prime + 8 + i) = *(state + i) ^ *(state + 4 + i) ^ GF_mult(0x02, *(state + 4*2 + i)) ^ GF_mult(0x03, *(state + 4*3 + i));
+        *(state_prime + 12 + i) = GF_mult(0x03, *(state + i)) ^ *(state + 4 + i) ^ *(state + 4*2 + i) ^ GF_mult(0x02, *(state + 4*3 + i));
     }
     for(int i=0; i<16; i++)
         *(state + i) = *(state_prime + i);
+}
+void key_expansion(unsigned char key[], unsigned char round_keys[][4])
+{
+    for (int i=0; i<4; i++)
+        for (int j=0; j<4; j++)
+            *(*(round_keys + i) + j) = *(key + 4*i + j);
+
+    for (int i=4; i<44; i++){
+        unsigned char tmp[4];
+        for (int j=0; j<4; j++)
+            tmp[j] = *(*(round_keys + (i-1)) + j);
+
+        if (i % 4 == 0){
+            shift_row(tmp, 0);
+            sub_bytes(tmp, 4);
+            tmp[0] ^= r_con[i/4];
+        }
+
+        for (int j=0; j<4; j++)
+            *(*(round_keys + i) + j) = *(*(round_keys + (i-4)) + j) ^ tmp[j];
+    }
 }
 
 int main()
